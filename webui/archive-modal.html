@@ -1,0 +1,251 @@
+<html>
+<head>
+  <title>Archived Chats</title>
+  <script type="module">
+    import { store } from "/plugins/chat_archive/webui/archive-store.js";
+  </script>
+</head>
+<body>
+  <div x-data="{ loading: true, items: [] }" x-init="
+    async () => {
+      const { callJsonApi } = await import('/js/api.js');
+      try {
+        const res = await callJsonApi('/plugins/chat_archive/get_archived', {});
+        if (res?.ok) {
+          items = Object.entries(res.archived || {}).map(([id, meta]) => ({
+            id,
+            name: meta.name || ('Chat ' + id.substring(0, 8)),
+            archived_at: meta.archived_at || 0,
+          })).sort((a, b) => b.archived_at - a.archived_at);
+        }
+      } catch (e) {
+        console.error('[chat_archive] modal fetch error:', e);
+      }
+      loading = false;
+    }
+  ">
+    <template x-if="$store.chatArchive">
+      <div class="ca-modal-root">
+
+        <!-- Loading state -->
+        <div x-show="loading" class="ca-modal-empty">
+          <p>Loading...</p>
+        </div>
+
+        <!-- Empty state -->
+        <div x-show="!loading && items.length === 0" class="ca-modal-empty">
+          <span class="material-symbols-outlined ca-empty-icon">inventory_2</span>
+          <p>No archived chats</p>
+        </div>
+
+        <!-- Archived chats list -->
+        <ul x-show="!loading && items.length > 0" class="ca-modal-list">
+          <template x-for="item in items" :key="item.id">
+            <li class="ca-modal-item">
+              <div class="ca-modal-item-info">
+                <span class="ca-modal-item-name" x-text="item.name"></span>
+                <span class="ca-modal-item-date" x-text="
+                  item.archived_at
+                    ? new Date(item.archived_at * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                    : ''
+                "></span>
+              </div>
+              <div class="ca-modal-item-actions">
+                <button
+                  class="btn btn-sm ca-btn-unarchive"
+                  title="Restore to sidebar"
+                  @click="
+                    await $store.chatArchive.unarchiveChat(item.id);
+                    items = items.filter(i => i.id !== item.id);
+                  "
+                >
+                  <span class="material-symbols-outlined">unarchive</span>
+                  <span class="ca-btn-label">Restore</span>
+                </button>
+                <button
+                  class="btn btn-sm ca-btn-delete"
+                  title="Delete permanently"
+                  @click="$confirmClick($event, async () => {
+                    await $store.chatArchive.deleteArchivedChat(item.id);
+                    items = items.filter(i => i.id !== item.id);
+                  })"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                  <span class="ca-btn-label">Delete</span>
+                </button>
+              </div>
+            </li>
+          </template>
+        </ul>
+
+      </div>
+    </template>
+  </div>
+
+  <template x-if="$store.chatArchive">
+    <div class="modal-footer" data-modal-footer>
+      <span class="ca-footer-count" x-data x-text="
+        (() => {
+          const n = Object.keys($store.chatArchive.archived).length;
+          return n + ' archived chat' + (n !== 1 ? 's' : '');
+        })()
+      "></span>
+    </div>
+  </template>
+
+  <style>
+    .ca-modal-root {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-height: 60vh;
+      overflow: hidden;
+    }
+
+    .ca-modal-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: var(--color-secondary);
+      opacity: 0.7;
+    }
+
+    .ca-empty-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.5;
+    }
+
+    .ca-modal-list {
+      list-style: none;
+      margin: 0;
+      padding: 0.5rem;
+      overflow-y: auto;
+      max-height: 280px; /* ~5 items visible, scroll for more */
+    }
+
+    .ca-modal-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      gap: 0.5rem;
+      transition: background-color var(--transition-speed);
+    }
+
+    .ca-modal-item:hover {
+      background-color: var(--color-background-hover);
+    }
+
+    .ca-modal-item-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 0;
+      gap: 2px;
+    }
+
+    .ca-modal-item-name {
+      font-size: var(--font-size-normal);
+      color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ca-modal-item-date {
+      font-size: var(--font-size-small);
+      color: var(--color-secondary);
+      opacity: 0.7;
+    }
+
+    .ca-modal-item-actions {
+      display: flex;
+      gap: 1.25rem;
+      flex-shrink: 0;
+      align-items: center;
+    }
+
+    .ca-btn-unarchive,
+    .ca-btn-delete {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      font-size: var(--font-size-normal);
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      background: transparent;
+      color: var(--color-text);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+    }
+
+    .ca-btn-unarchive .material-symbols-outlined,
+    .ca-btn-delete .material-symbols-outlined {
+      font-size: 20px;
+    }
+
+    .ca-btn-unarchive:hover {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+    }
+
+    .ca-btn-delete:hover {
+      background: #e74c3c;
+      color: white;
+      border-color: #e74c3c;
+    }
+
+    /* Two-click confirm state (from $confirmClick) */
+    .ca-btn-delete.confirming {
+      background: #e74c3c;
+      color: white;
+      border-color: #c0392b;
+      animation: ca-pulse-danger 0.6s ease-in-out infinite alternate;
+    }
+
+    @keyframes ca-pulse-danger {
+      from { opacity: 1; }
+      to { opacity: 0.7; }
+    }
+
+    .ca-footer-count {
+      font-size: var(--font-size-small);
+      color: var(--color-secondary);
+      opacity: 0.7;
+    }
+
+    /* Small screens: hide button labels, show icons only */
+    @media (max-width: 480px) {
+      .ca-btn-label {
+        display: none;
+      }
+
+      .ca-btn-unarchive,
+      .ca-btn-delete {
+        gap: 0;
+        padding: 8px;
+      }
+
+      .ca-btn-unarchive .material-symbols-outlined,
+      .ca-btn-delete .material-symbols-outlined {
+        font-size: 20px;
+      }
+
+      .ca-modal-item {
+        padding: 0.5rem 0.4rem;
+      }
+
+      .ca-modal-item-actions {
+        gap: 0.75rem;
+      }
+    }
+
+  </style>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<html>
+
+<head>
+  <script type="module">
+    import { store } from "/plugins/chat_archive/webui/archive-store.js";
+  </script>
+</head>
+
+<body>
+  <div x-data>
+    <template x-if="$store.chatArchive">
+      <div x-init="$store.chatArchive.init()"></div>
+    </template>
+  </div>
+
+  <style>
+    /* Archive button: remove border/box-shadow, keep spacing consistent */
+    .archive-btn {
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    .archive-btn:hover {
+      border: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+    }
+
+    /* Header actions wrapper: group archive + new chat buttons together */
+    .archive-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    /* Header archive button: match #newChat styling */
+    #archiveChats {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--color-text);
+      cursor: pointer;
+      padding: 0.25rem;
+      opacity: 0.6;
+      transition: opacity 0.1s ease-in-out, color 0.1s ease-in-out, filter 0.1s ease-in-out;
+    }
+
+    #archiveChats:hover {
+      opacity: 0.85;
+      filter: brightness(1.08);
+    }
+
+    #archiveChats:active {
+      opacity: 0.5;
+      filter: brightness(0.96);
+    }
+
+    #archiveChats .material-symbols-outlined {
+      color: var(--color-text);
+      font-size: 18px;
+    }
+  </style>
+</body>
+
+</html>
