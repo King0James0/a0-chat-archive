@@ -170,9 +170,12 @@ const model = {
       const li = container.closest("li");
       if (!li) return;
 
+      // Read the row's Alpine scope via the public API and accept either
+      // iterator name: stock sidebar uses `context`, project_chat_view uses `chat`.
+      const scope = globalThis.Alpine?.$data?.(li) || {};
       const chatId =
-        li.__x_for_context?.id ||
-        li._x_dataStack?.[0]?.context?.id ||
+        scope.context?.id ||
+        scope.chat?.id ||
         container.dataset.chatId;
       if (!chatId) return;
 
@@ -211,16 +214,19 @@ const model = {
   _injectHeaderButton() {
     if (document.querySelector(".archive-header-btn")) return;
 
-    // Try project_sidebar's visible header row first, fall back to original
-    const headerRow =
-      document.querySelector(".project-sidebar-container .section-header-row") ||
-      document.querySelector(".chats-list-container .section-header-row");
+    // Anchor to the visible chats header. When a sidebar-replacement plugin
+    // (e.g. project_chat_view) is active it moves its own header to the start,
+    // so the first .section-header-row is the one actually on screen.
+    const headerRow = document.querySelector(
+      ".chats-list-container .section-header-row"
+    );
     if (!headerRow) return;
 
-    // project_sidebar uses #newChatProjectSidebar; original sidebar uses #newChat
+    // Match any new-chat button variant: #newChat (stock),
+    // #newChatProjectView (project_chat_view), #newChatProjectSidebar, …
     const newChatBtn =
-      headerRow.querySelector("#newChatProjectSidebar") ||
-      headerRow.querySelector("#newChat");
+      headerRow.querySelector('[id^="newChat"]') ||
+      headerRow.querySelector('button[title="New Chat"]');
     if (!newChatBtn) return;
 
     const btn = document.createElement("button");
