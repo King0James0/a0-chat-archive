@@ -167,12 +167,11 @@ const model = {
     containers.forEach((container) => {
       if (container.querySelector(".archive-btn")) return;
 
-      const li = container.closest("li");
-      if (!li) return;
-
       // Read the row's Alpine scope via the public API and accept either
       // iterator name: stock sidebar uses `context`, project_chat_view uses `chat`.
-      const scope = globalThis.Alpine?.$data?.(li) || {};
+      // Read from the container itself (not a wrapping <li>) so it works whether
+      // the row is an <li> (stock) or a <div class="pcv-chat-row"> (project_chat_view).
+      const scope = globalThis.Alpine?.$data?.(container) || {};
       const chatId =
         scope.context?.id ||
         scope.chat?.id ||
