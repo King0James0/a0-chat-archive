@@ -80,6 +80,13 @@ const model = {
     try {
       const { sendJsonData } = await import("/index.js");
       await sendJsonData("/chat_remove", { context: chatId });
+      // Also drop the archive.json record on the backend. Without this, get_archived re-reads the
+      // file on reopen and the just-deleted chat reappears as a ghost. Best-effort.
+      try {
+        await callJsonApi("/plugins/chat_archive/unarchive_chat", { chat_id: chatId });
+      } catch (e2) {
+        console.error("[chat_archive] Failed to clear archive record on delete:", e2);
+      }
       const updated = { ...this.archived };
       delete updated[chatId];
       this.archived = updated;
